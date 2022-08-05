@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block content %}
+    <a href="startBinning">
+        <button type="button" class="btn btn-outline-primary" >添加分箱任务</button>
+    </a>
+    <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>分箱任务名</th>
+                <th>数据集名</th>
+                <th>分箱状态</th>
+                <th>开始时间</th>
+                <th>结束时间</th>
+                <th>上次修改</th>
+                <th>分箱参照Label</th>
+                <th>训练集比例</th>
+                <th>随机种子</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+
+        {% for task in tasks %}
+          <tr>
+            <td>{{ task.binning_task_name }}</td>
+            <td>{{ task.data_set_id.data_file_name }}</td>
+            <td>
+                {% if task.task_status == 0 %}
+                    <p style="color: #ffd61d">分箱中</p>
+                {% elif task.task_status == 1 %}
+                    <p style="color: #31ff0b">分箱完成</p>
+                {% elif task.task_status == 2 %}
+                    <p style="color: #ff1f11">分箱失败</p>
+                {% elif task.task_status == 3 %}
+                    <p style="color: #ffd61d">分箱更新中</p>
+                {% endif %}
+            </td>
+            <td>{{ task.task_start|date:"Y-m-d H:i:s" }}</td>
+            <td>{{ task.task_end|date:"Y-m-d H:i:s" }}</td>
+            <td>{{ task.last_modified|date:"Y-m-d H:i:s" }}</td>
+            <td>{{ task.training_label }}</td>
+            <td>{{ task.train_ratio }}%</td>
+            <td>{{ task.random_state }}</td>
+            <td>
+                {% if task.task_status == 1 %}
+                    <a href="/binning/result/{{ task.id }}">
+                        <button type="button" class="layui-btn layui-btn-xs layui-btn-radius layui-btn-info">
+                        分箱结果
+                        </button>
+                    </a>
+                {% endif %}
+                <input type="button" class="layui-btn layui-btn-xs layui-btn-radius layui-btn-danger" onclick="deleteBinning({{ task.id }})" value="删除">
+            </td>
+          </tr>
+        {% endfor %}
+    </table>
+    <script>
+        function deleteBinning(task_id){
+            //询问框
+            layer.confirm('该分箱结果衍生的数据集也会级联删除，确认删除吗？', {
+              btn: ['删除','取消'] //按钮
+            }, function(){
+                $.ajax({
+                    url: '.',
+                    method: 'delete',
+                    data: {
+                        "task_id": task_id
+                    },
+                    success: function (data) {
+                        layer.msg(data, {icon: 1});
+                        setTimeout(function () {
+                            window.location.replace(".");
+                        }, 500);
+                    }
+                });
+            })
+        }
+    </script>
+{% endblock %}

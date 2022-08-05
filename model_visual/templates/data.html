@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block content %}
+    <a href="uploadData">
+        <button type="button" class="btn btn-outline-primary" >添加数据集</button>
+    </a>
+    {% if dataList %}
+        <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>数据名称</th>
+                <th>上传时间</th>
+                <th>数据集描述</th>
+                <th>特征数</th>
+                <th>样本数</th>
+                <th>数据文件名</th>
+                <th>数据大小</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+        {% for data in dataList %}
+          <tr>
+            <td>{{ data.data_name }}</td>
+            <td>{{ data.data_upload_date }}</td>
+            <td>{{ data.data_desc }}</td>
+            <td>{{ data.data_feature_nums }}</td>
+            <td>{{ data.data_sample_nums }}</td>
+            <td>{{ data.data_file_name }}</td>
+            <td>{{ data.data_file_size }} MB</td>
+            <td>
+                <form action="." method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="id" value="{{ data.id }}"/>
+                    <input type="submit" class="layui-btn layui-btn-sm layui-btn-radius layui-btn-normal" value="下载"/>
+{#                    {% if data.if_one_hot_finish %}#}
+{#                        <input type="button" class="layui-btn layui-btn-sm layui-btn-radius layui-btn-normal" value="下载ONE_HOT">#}
+{#                    {% else %}#}
+{#                        <input type="button" class="layui-btn layui-btn-sm layui-btn-radius layui-btn-normal layui-btn-disabled" value="ONE_HOT生成中">#}
+{#                    {% endif %}#}
+{#                    <input type="button" class="layui-btn layui-btn-sm layui-btn-radius layui-btn-info" value="编辑分箱信息" onclick="bin({{ data.id }});">#}
+                    <input type="button" class="layui-btn layui-btn-sm layui-btn-radius layui-btn-info" value="详情">
+                    <button type="button" class="layui-btn layui-btn-sm layui-btn-radius layui-btn-danger" onclick="deleteData({{ data.id }})">删除</button>
+                </form>
+            </td>
+          </tr>
+        {% endfor %}
+
+        </table>
+    {% endif %}
+    {% if not dataList %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+          <strong>还没有上传数据集！</strong>
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+    {% endif %}
+
+<script type = "text/javascript">
+    function deleteData(id){
+        //询问框
+        layer.confirm('涉及的训练任务也会级联删除 确认删除？', {
+          btn: ['删除','取消'] //按钮
+        }, function(){
+            $.ajax({
+                url: '.',
+                method: 'delete',
+                data: {
+                    "id": id
+                },
+                success: function (data) {
+                    layer.msg(data, {icon: 1});
+                    setTimeout(function () {
+                        window.location.replace(".");
+                    }, 500);
+                }
+            });
+
+        })
+    }
+
+    function bin(id){
+        window.location.replace("bin/"+id);
+    }
+</script>
+
+{% endblock %}

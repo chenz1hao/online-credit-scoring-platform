@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <br><h2>创建分箱任务</h2><br>
+    <div class="layui-form" lay-filter="form">
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">分箱任务名</label>
+        <div class="layui-input-block">
+            <input type="text" placeholder="填写分箱任务名" name="binning_task_name" autocomplete="off" class="layui-input" required lay-verify="required">
+        </div>
+      </div>
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">数据集</label>
+        <div class="layui-input-block">
+            <form id="dataForm" method="post" action="/getDataFeatures">
+                {% csrf_token %}
+                <select name="data_id" lay-filter="dataset_select">
+                    <option value="">选择数据集</option>
+                    {% for data in dataset %}
+                        <option value="{{ data.id }}">{{ data.data_file_name }}</option>
+                    {% endfor %}
+               </select>
+            </form>
+        </div>
+      </div>
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">Target变量</label>
+        <div class="layui-input-block">
+            <select name="label_select" lay-filter="feature_select" id="feature_list" required lay-verify="required">
+                <option value="">选择分箱任务的Target</option>
+            </select>
+        </div>
+      </div>
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">训练集比例(%)</label>
+        <div class="layui-input-block">
+            <br><br>
+            <div id="slide" class="demo-slider" name="train_ratio"></div>
+        </div>
+      </div>
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">随机种子(随机划分测试训练集)</label>
+        <div class="layui-input-block">
+            <input type="number" name="random_state" autocomplete="off" class="layui-input" lay-verify="number">
+        </div>
+      </div>
+
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">选择需要分箱的特征</label>
+        <div class="layui-input-block">
+            <div id="test4" class="demo-transfer" name="need_binning"></div>
+        </div>
+      </div>
+
+
+      <div class="layui-form-item">
+        <div class="layui-input-block">
+          <a href="./" class="layui-btn">返回</a>
+          <button class="layui-btn" lay-submit lay-filter="*">开始分箱</button>
+        </div>
+      </div>
+    </div>
+    <script src={% static 'js/jquery.form.js' %}></script>
+    <script>
+        // layui form
+        layui.use(['form', 'transfer'], function(){
+          var form = layui.form;
+          var transfer = layui.transfer;
+          form.on('submit(*)', function(data){
+              var data1 = form.val("form");
+              data1.train_ratio = train_ratio
+              binning_feature_list = getBinningFeatureList(transfer.getData('need_binning'))
+              if(binning_feature_list.length == 0){
+                  layer.msg('至少选择一个需要分箱的特征');
+              }else{
+                  binning_feature_list = binning_feature_list.join(",")
+                  data1.binning_feature_list = binning_feature_list
+                  $.ajax({
+                    url: '.',
+                    method: 'post',
+                    data: data1,
+                    success: function (data) {
+                        layer.msg(data);
+                        setTimeout(function () {
+                            window.location.replace("../");
+                        }, 1000);
+                    }
+                  });
+              }
+          });
+        });
+
+        // 监听数据集选择select
+        layui.use(['form', 'transfer'], function () {
+            let form = layui.form;
+            let transfer = layui.transfer
+            form.on('select(dataset_select)', function(data){
+                if(data.value == ""){ // 取消选择时
+                    $("#feature_list").empty()
+                    $("#feature_list").append("<option value=''>选择分箱任务的Target</option>")
+                    // 清空穿梭框的数据
+                    transfer.render({
+                        elem: '#test4'
+                        ,title: ['不需要分箱 / 离散特征', '需要分箱 / 连续特征']
+                        ,showSearch: true
+                        ,id: 'need_binning'
+                      })
+
+                    layui.use('form', function(){
+                       var form = layui.form;
+                       form.render();
+                    });
+                    return null
+                }
+                var options = {
+                    url: "/getDataFeatures/",
+                    type: "post",
+                    success: function (data) {
+                        data_json = JSON.parse(data);
+                        // 填充label选择下拉列表
+                        makeLabelList(data_json)
+                        // 填充穿梭框的数据
+                        makeTransferData(data_json)
+                    }
+                };
+                $("#dataForm").ajaxSubmit(options);
+            })
+        })
+
+        // 训练集比例滚动选择条
+        train_ratio = 70
+        layui.use('slider', function(){
+          var $ = layui.$
+          ,slider = layui.slider;
+          //开启输入框
+          slider.render({
+            elem: '#slide'
+            ,input: true //输入框
+            ,value: 70
+            ,change: function(value){
+                train_ratio = value
+            }
+          });
+        });
+
+        layui.use(['transfer', 'layer', 'util'], function(){
+          var $ = layui.$
+          ,transfer = layui.transfer
+          ,layer = layui.layer
+          ,util = layui.util;
+          //显示搜索框的穿梭框
+          transfer.render({
+            elem: '#test4'
+            ,title: ['不需要分箱 / 离散特征', '需要分箱 / 连续特征']
+          })
+          //批量办法定事件
+          util.event('lay-demoTransferActive', {
+            getData: function(othis){
+              var getData = transfer.getData('need_binning'); //获取右侧数据
+              layer.alert(JSON.stringify(getData));
+            }
+          });
+        });
+
+        function makeLabelList(data_json){
+            // 先清空 不然切换数据集下拉列表会追加
+            $("#feature_list").empty()
+            feature_list_html = ""
+            for(let i=0; i<data_json['features'].length; i++){
+                feature_list_html += "<option value='" + data_json['features'][i] + "'>" + data_json['features'][i] + "</option>"
+            }
+            $("#feature_list").append(feature_list_html)
+            layui.use('form', function(){
+               var form = layui.form;
+               form.render();
+            });
+        }
+
+        function makeTransferData(data_json){
+            transferList = []
+            for(let i=0; i<data_json['features'].length; i++){
+                dataObj = new Object()
+                dataObj.value = data_json['features'][i]
+                dataObj.title = data_json['features'][i]
+                transferList.push(dataObj)
+            }
+            layui.use(['transfer', 'layer', 'util'], function(){
+              var $ = layui.$
+              ,transfer = layui.transfer
+              ,layer = layui.layer
+              ,util = layui.util;
+              //显示搜索框的穿梭框
+              transfer.render({
+                elem: '#test4'
+                ,data: transferList
+                ,title: ['不需要分箱 / 离散特征', '需要分箱 / 连续特征']
+                ,showSearch: true
+                ,id: 'need_binning'
+              })
+              //批量办法定事件
+              util.event('lay-demoTransferActive', {
+                getBinningFeature: function(othis){
+                  var getData = transfer.getData('need_binning'); //获取右侧数据
+                  layer.alert(JSON.stringify(getData));
+                }
+              });
+            });
+         }
+
+         function getBinningFeatureList(obj_list){
+             binning_feature_list = []
+             for(let i=0; i<obj_list.length; i++){
+                 binning_feature_list.push(obj_list[i].value)
+             }
+             return binning_feature_list
+         }
+    </script>
+{% endblock %}

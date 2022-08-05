@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<table class="layui-table" lay-size="lg">
+  <colgroup>
+    <col width="150">
+    <col width="200">
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th>分箱后特征列表</th>
+      <th>分箱区间</th>
+    </tr>
+  </thead>
+  <tbody>
+  {%  for key,value in var_split_dict.items %}
+    <tr>
+      <td><h4>{{ key }}</h4></td>
+      <td>
+          {% for v in value %}
+              <div>
+                  {% for num in v %}
+                      {% if forloop.counter == 2 %}
+                          <input type="number" value="{{ num }}" name="url" lay-verify="required|number" autocomplete="off" class="layui-input" style="width: 30%;">
+                      {% else %}
+                          <input type="number" value="{{ num }}" name="url" lay-verify="required|number" autocomplete="off" class="layui-input" style="width: 30%; float:left;">
+                      {% endif %}
+                  {% endfor %}
+              </div>
+          {% endfor %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+
+{% endblock %}

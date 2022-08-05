@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>{{ title }} - Model Visual Site</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" crossorigin="anonymous">
+    <script src={% static 'js/jquery.3.6.0.js' %} ></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" ></script>
+    <link rel="stylesheet" href={% static 'layui/css/layui.css' %} media="all">
+    <script src={% static 'layui/layui.js' %} ></script>
+    <link rel="shortcut icon" href="#" />
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <a class="navbar-brand" href="#">ScoreStudio</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+
+          <li class="nav-item {% if active == 2 %} active {% endif %}">
+            <a class="nav-link" href="/dataset/">数据列表 <i class="layui-icon layui-icon-next"></i>
+                <span class="sr-only">(current)</span>
+            </a>
+          </li>
+          <li class="nav-item {% if active == 3 %} active {% endif %}">
+            <a class="nav-link" href="/binning/">分箱任务 <i class="layui-icon layui-icon-next"></i>
+                <span class="sr-only">(current)</span>
+            </a>
+          </li>
+          <li class="nav-item {% if active == 4 %} active {% endif %}">
+            <a class="nav-link" href="/dataGenerate/">数据衍生(可选) <i class="layui-icon layui-icon-next"></i>
+                <span class="sr-only">(current)</span>
+            </a>
+          </li>
+            <li class="nav-item {% if active == 1 %} active {% endif %}">
+                <a class="nav-link" href="/tasks/">训练任务
+                    {% if active == 1 %}
+                        <span class="sr-only">(current)</span>
+                    {% endif %}
+                </a>
+            </li>
+        </ul>
+      </div>
+    </nav>
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+
+
+    </div>
+</body>
+</html>

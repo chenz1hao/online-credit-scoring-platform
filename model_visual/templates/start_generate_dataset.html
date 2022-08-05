@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <link rel="stylesheet" href={% static 'codemirror-5.62.3/lib/codemirror.css' %}>
+    <link rel="stylesheet" href={% static 'codemirror-5.62.3/theme/dracula.css' %}>
+    <link rel="stylesheet" href={% static 'codemirror-5.62.3/addon/lint/lint.css' %}>
+    <br><h2>创建衍生数据集</h2><br>
+    <div class="layui-form" lay-filter="form">
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">衍生数据集名称</label>
+            <div class="layui-input-block">
+                <input type="text" placeholder="衍生数据集名称" name="generate_data_set_name" autocomplete="off" class="layui-input" required lay-verify="required">
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">参考分箱结果</label>
+            <div class="layui-input-block">
+                <select id="binning_task_id" name="binning_task_id" lay-filter="binning_task_select" required lay-verify="required">
+                    <option value="">选择分箱任务结果</option>
+                    {% for bin in binning_task %}
+                        <option value="{{ bin.pk }}">{{ bin.binning_task_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">衍生类型</label>
+            <div class="layui-input-block">
+                <select id="generate_type" name="generate_type" lay-filter="generate_type" required lay-verify="required">
+                    <option value="">选择数据衍生类型</option>
+                    <option value="one-hot">one-hot</option>
+                    <option value="woe">WoE替换</option>
+               </select>
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text" id="mono_setting" hidden="hidden">
+            <label class="layui-form-label">指定单调性 (0:无单调约束 1:单调减 2:单调增)</label>
+            <div class="layui-input-block">
+                    <p>
+                        <textarea class="form-control" id="code" name="code"></textarea>
+                    </p>
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+              <a href="./" class="layui-btn">返回</a>
+              <button class="layui-btn" lay-submit lay-filter="*">数据衍生</button>
+            </div>
+        </div>
+    </div>
+    <script src={% static 'codemirror-5.62.3/lib/codemirror.js' %}></script>
+    <script src={% static 'js/jquery.form.js' %}></script>
+    <script src={% static 'codemirror-5.62.3/mode/javascript/javascript.js' %}></script>
+    <script src={% static 'codemirror-5.62.3/mode/css/css.js' %}></script>
+    <script src={% static 'codemirror-5.62.3/addon/lint/lint.js' %}></script>
+    <script src={% static 'codemirror-5.62.3/addon/lint/javascript-lint.js' %}></script>
+    <script src={% static 'codemirror-5.62.3/addon/lint/json-lint.js' %}></script>
+    <script src={% static 'codemirror-5.62.3/addon/lint/css-lint.js' %}></script>
+    <script src={% static 'js/jsonlint.js' %}></script>
+    <script src={% static 'codemirror-5.62.3/addon/edit/matchbrackets.js' %}></script>
+    <script src={% static 'codemirror-5.62.3/addon/edit/closebrackets.js' %}></script>
+    <script src={% static 'codemirror-5.62.3/addon/hint/show-hint.js' %}></script>
+    <script src={% static 'codemirror-5.62.3/addon/display/autorefresh.js' %}></script>
+
+    <script>
+        layui.use(['form'], function() {
+            var form = layui.form;
+            form.on('submit(*)', function (data) {
+                if($("#generate_type option:selected").val() == "one-hot"){
+                    data.field.mono = editor.getValue()
+                }
+                $.ajax({
+                    url: '.',
+                    method: 'post',
+                    data: data.field,
+                    success: function (data) {
+                        layer.msg(data);
+                        setTimeout(function () {
+                            window.location.replace("../");
+                        }, 1000);
+                    }
+                })
+
+            });
+        })
+
+        // 监听数据集选择select
+        layui.use(['form'], function () {
+            let form = layui.form;
+            form.on('select(generate_type)', function(data){
+                if(data.value == ""){
+                    $("#mono_setting").attr("hidden", "hidden")
+                }
+                // 如果是one-hot 并且 分箱任务也选择时
+                if(data.value == "one-hot" && $("#binning_task_id option:selected").val() != ""){
+                    // 填充mono_setting的内容
+                    makeMonoSettingText($("#binning_task_id option:selected").val());
+                    $("#mono_setting").removeAttr("hidden")
+                    editor.refresh()
+                }
+
+                // 如果是woe衍生的话，则将id:code隐藏起来，因为不需要指定单调性了
+                if(data.value == "woe"){
+                    $("#mono_setting").attr("hidden", "hidden")
+                }
+            })
+
+            form.on('select(binning_task_select)', function(data){
+                if(data.value == ""){
+                    $("#mono_setting").attr("hidden", "hidden")
+                }
+                // 如果是one-hot 并且 分箱任务也选择时
+                if(data.value != "" && $("#generate_type option:selected").val() != ""){
+                    // 填充mono_setting的内容
+                    makeMonoSettingText($("#binning_task_id option:selected").val());
+                    $("#mono_setting").removeAttr("hidden")
+                    editor.refresh()
+                }
+
+            })
+        })
+
+        // codemirror
+        var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+           lineNumbers: true,
+           mode: "application/json",
+           gutters: ["CodeMirror-lint-markers"],
+           lint: true,
+           theme: 'dracula',
+           styleActiveLine: true,
+           matchBrackets: true,
+           smartIndent: true, // 智能缩进
+           autoRefresh: true,
+        });
+
+        function makeMonoSettingText(binning_task_id){
+            $.ajax({
+                url: '../../getBinnedFeatures/',
+                method: 'post',
+                data: {
+                    'binning_select': binning_task_id
+                },
+                success: function (data) {
+                    data = data.slice(1, data.length-1)
+                    data_arr = data.split(", ")
+
+                    json_txt = "{"
+                    for(let i=0; i<data_arr.length; i++){
+                        if(i == data_arr.length-1){
+                            json_txt += ('"' + data_arr[i].slice(1, data_arr[i].length-1)+ '"' + ':0')
+                        }else{
+                            json_txt += ('"' + data_arr[i].slice(1, data_arr[i].length-1)+ '"' + ':0,')
+                        }
+                    }
+                    json_txt += "}"
+                    editor.setValue((JSON.stringify(JSON.parse(json_txt), null, 2)))
+                    editor.refresh()
+                }
+            });
+        }
+    </script>
+{% endblock %}

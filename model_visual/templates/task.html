@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+        <a href="../tasks/create_scorecard" class="btn btn-outline-primary">创建评分卡</a>
+        <a href="../tasks/startTask" class="btn btn-outline-primary">创建训练任务</a>
+        <a href="../tasks/nonnegaLogRegSC" class="btn btn-outline-primary">非负逻辑回归创建评分卡</a>
+        <button type="button" class="btn btn-primary" onclick="compare();">性能对比</button>
+        <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>选择</th>
+                <th>数据集</th>
+                <th>模型</th>
+                <th>开始时间</th>
+                <th>结束时间</th>
+                <th>训练状态</th>
+                <th>训练集比例</th>
+                <th>划分随机种子</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+
+        {% for t in tasks %}
+          <tr>
+           <td>
+                  {% if t.task_status == 1 %}
+                      <input type="checkbox" value="{{ t.id }}" lay-skin="primary">
+                  {% else %}
+                      <input type="checkbox" disabled="disabled">
+                  {% endif %}
+           </td>
+           <td>{{ t.data_set_id.data_file_name }}</td>
+
+            <td>{{ t.model_id.model_name }}</td>
+            <td>{{ t.task_start|date:"Y-m-d H:i:s" }}</td>
+            {% if t.task_status == 1 %}
+                <td>{{ t.task_end|date:"Y-m-d H:i:s" }}</td>
+            {% else %}
+                <td>×</td>
+            {% endif %}
+            <td>
+                {% if t.task_status == 0 %}
+                    <p style="color: #ffd61d">训练中</p>
+                {% elif t.task_status == 1 %}
+                    <p style="color: #31ff0b">训练完成</p>
+                {% elif t.task_status == 2 %}
+                    <p style="color: #ff1f11">训练失败</p>
+                {% endif %}
+            </td>
+            <td>{{ t.model_run_train_test_split }}% </td>
+            <td>{{ t.model_run_random_state }}</td>
+            <td>
+                <div class="layui-btn-container">
+                    {% if t.task_status == 1 %}
+                        {% if t.model_id.model_name == "score_card" or t.model_id.model_name == "non_negative_LogReg" %}
+                            <a href="../tasks/sample_predict/{{ t.id }}">
+                                <input type="button" class="layui-btn layui-btn-xs layui-btn-radius layui-btn-normal" value="单样本预测">
+                            </a>
+                        {% endif %}
+                        {% if t.model_if_linear == True %}
+                            <a href="../tasks/TaskResult/{{ t.id }}">
+                                <input type="button" class="layui-btn layui-btn-xs layui-btn-radius layui-btn-info" value="查看系数" />
+                            </a>
+                        {% endif %}
+                        {% if t.model_id.model_name == "score_card"%}
+                            <a href="../tasks/score_card/{{ t.id }}">
+                                <input type="button" class="layui-btn layui-btn-xs layui-btn-radius layui-btn-info" value="查看评分卡" />
+                            </a>
+                        {% endif %}
+                        {% if t.model_id.model_name == "non_negative_LogReg" %}
+                            <a href="../tasks/custom_score_card/{{ t.id }}">
+                                <input type="button" class="layui-btn layui-btn-xs layui-btn-radius layui-btn-info" value="查看评分卡" />
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                    {% if t.task_status == 2 %}
+{#                            <button class="layui-btn layui-btn-xs layui-btn-radius layui-btn-info" data-toggle="modal" data-target="#myModal{{ t.id }}">报错信息</button>#}
+                        <button type="button" class="layui-btn layui-btn-xs layui-btn-radius layui-btn-warm" title="报错信息"
+                                data-container="body" data-toggle="popover" data-placement="top"
+                                data-content="{{ t.task_error_log }}">
+                            报错信息
+                        </button>
+                    {% endif %}
+                    <input type="button" class="layui-btn layui-btn-xs layui-btn-radius layui-btn-danger" onclick="deleteLog({{ t.id }})" value="删除记录">
+
+                </div>
+            </td>
+          </tr>
+        {% endfor %}
+
+        </table>
+        <script>
+            $(function () {
+                $("[data-toggle='popover']").popover();
+            });
+
+            function detail(task_id){
+                window.open("detail/" + task_id);
+            }
+
+            function compare(){
+                if($('input[type="checkbox"]:checked').length == 0){
+                    layer.msg('没有选择任务');
+                    return
+                }
+                tasks = new Array()
+                $('input[type="checkbox"]:checked').each(function(i){
+                    tasks.push(parseInt($(this).val()))
+                });
+                $.ajax({
+                    url: 'TaskCompare/',
+                    method: 'post',
+                    data: {
+                        'tasks':JSON.stringify(tasks)
+                    },
+                    success: function (data) {
+                        contentHtml = makeHtml(data);
+                        layer.open({
+                          title: '测试集结果对比',
+                          type: 1,
+                          area: ['1000px', '600px'],
+                          shadeClose: true, //点击遮罩关闭
+                          content: contentHtml
+                        });
+                    }
+                });
+            }
+            function makeHtml(data){
+                data = JSON.parse(data)
+
+                let contentHtml = "<table class=\"layui-table\"><thead><tr><th>TaskID</th> <th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1-Score</th><th>AUC Plot</th></tr></thead>";
+                contentHtml += "<tbody>"
+                for(let i=0; i<data.length; i++){
+                    contentHtml += "<tr>"
+                    contentHtml += "<td>"+data[i].task_id+"</td>"
+                    contentHtml += "<td>"+data[i].accuracy+"</td>"
+                    contentHtml += "<td>"+data[i].precision+"</td>"
+                    contentHtml += "<td>"+data[i].recall+"</td>"
+                    contentHtml += "<td>"+data[i].f1_score+"</td>"
+                    contentHtml += "<td><img src='"+data[i].auc_plot_url+"'/></td>"
+                    contentHtml += "</tr>"
+                }
+                contentHtml += "</tbody>"
+                contentHtml += "</table>";
+
+                return contentHtml;
+            }
+
+            function deleteLog(id){
+                //询问框
+                layer.confirm('确定删除该训练记录吗？', {
+                    btn: ['删除','取消'] //按钮
+                }, function(){
+                    $.ajax({
+                        url: '.',
+                        method: 'delete',
+                        data: {
+                            "task_id": id
+                        },
+                        success: function (data) {
+                            layer.msg(data, {icon: 1});
+                            setTimeout(function () {
+                                window.location.replace(".");
+                            }, 500);
+                        }
+                    });
+                })
+            }
+        </script>
+{% endblock %}

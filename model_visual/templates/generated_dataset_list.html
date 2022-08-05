@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+    <a href="startGenerateData">
+        <button type="button" class="btn btn-outline-primary" >衍生数据</button>
+    </a>
+    <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>生成数据集名</th>
+                <th>原数据集</th>
+                <th>所用分箱任务名</th>
+                <th>衍生类型</th>
+                <th>生成状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+        {% for row in generate_data_set_task %}
+          <tr>
+               <td>{{ row.generate_data_set_name }}.csv</td>
+               <td>{{ row.data_set.data_file_name }}</td>
+               <td>{{ row.binning_task.binning_task_name }}</td>
+               <td>{{ row.generate_type }}</td>
+                <td>
+                    {% if row.generate_status == 0 %}
+                        <p style="color: #ffd61d">生成中</p>
+                    {% elif row.generate_status == 1 %}
+                        <p style="color: #31ff0b">生成完成</p>
+                    {% elif row.generate_status == 2 %}
+                        <p style="color: #ff1f11">生成失败</p>
+                    {% endif %}
+                </td>
+               <td>
+                   <form action="." method="post">
+                       {% csrf_token %}
+                       <input type="hidden" name="id" value="{{ row.id }}"/>
+                       <input type="submit" class="layui-btn layui-btn-xs layui-btn-radius layui-btn-info" value="下载"/>
+                       <button type="button" class="layui-btn layui-btn-xs layui-btn-radius layui-btn-danger" onclick="deleteData({{ row.id }})">删除</button>
+                   </form>
+               </td>
+          </tr>
+        {% endfor %}
+    </table>
+    <script>
+        function deleteData(generated_task_id){
+            //询问框
+            layer.confirm('确认删除？', {
+              btn: ['删除','取消'] //按钮
+            }, function(){
+                $.ajax({
+                    url: '.',
+                    method: 'delete',
+                    data: {
+                        "id": generated_task_id
+                    },
+                    success: function (data) {
+                        layer.msg(data, {icon: 1});
+                        setTimeout(function () {
+                            window.location.replace(".");
+                        }, 500);
+                    }
+                });
+            })
+        }
+    </script>
+{% endblock %}

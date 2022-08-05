@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <br><h2>创建评分卡</h2><br>
+    <div class="layui-form" lay-filter="form">
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">分箱任务选择</label>
+        <div class="layui-input-block">
+            <form id="dataForm" method="post" action="/getBinnedFeatures">
+                {% csrf_token %}
+                <select name="binning_select" lay-filter="binning_select" required lay-verify="required">
+                    <option value="">选择分箱结果</option>
+                    {% for b in binning_library %}
+                        <option value="{{ b.id }}">{{ b.binning_task_name }}</option>
+                    {% endfor %}
+               </select>
+            </form>
+        </div>
+      </div>
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">选择创建评分卡的变量</label>
+        <div class="layui-input-block">
+            <div id="test4" class="demo-transfer" name="into_scorecard"></div>
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <div class="layui-input-block">
+          <a href="../" class="layui-btn">返回</a>
+          <button class="layui-btn" lay-submit lay-filter="*">创建评分卡</button>
+        </div>
+      </div>
+    </div>
+    <script src={% static 'js/jquery.form.js' %}></script>
+    <script>
+        layui.use(['transfer', 'layer', 'util'], function(){
+          var $ = layui.$
+          ,transfer = layui.transfer
+          ,layer = layui.layer
+          ,util = layui.util;
+          //显示搜索框的穿梭框
+          transfer.render({
+            elem: '#test4'
+            ,title: ['未选择的变量', '建立评分卡的变量']
+          })
+          //批量办法定事件
+          util.event('lay-demoTransferActive', {
+            getData: function(othis){
+              var getData = transfer.getData('into_scorecard'); //获取右侧数据
+              layer.alert(JSON.stringify(getData));
+            }
+          });
+        });
+
+        // 监听分箱任务选择的select
+        layui.use(['form', 'transfer'], function () {
+            let form = layui.form;
+            let transfer = layui.transfer
+            form.on('select(binning_select)', function(data){
+                if(data.value == ""){ // 取消选择时
+                  // 清空穿梭框的数据
+                    transfer.render({
+                        elem: '#test4'
+                        ,title: ['未选择的变量', '建立评分卡的变量']
+                    })
+                    layui.use('form', function(){
+                       var form = layui.form;
+                       form.render();
+                    });
+                    return null
+                }
+                var options = {
+                    url: "/getBinnedFeatures/",
+                    type: "post",
+                    success: function (data) {
+                        data_json = JSON.parse(data);
+                        makeTransferData(data_json)
+                    }
+                };
+                $("#dataForm").ajaxSubmit(options);
+            })
+        })
+
+        function makeTransferData(data_json){
+            transferList = []
+            for(let i=0; i<data_json.length; i++){
+                dataObj = new Object()
+                dataObj.value = data_json[i]
+                dataObj.title = data_json[i]
+                transferList.push(dataObj)
+            }
+            layui.use(['transfer', 'layer', 'util'], function(){
+              var $ = layui.$
+              ,transfer = layui.transfer
+              ,layer = layui.layer
+              ,util = layui.util;
+              //显示搜索框的穿梭框
+                transfer.render({
+                    elem: '#test4'
+                    ,title: ['未选择的变量', '建立评分卡的变量']
+                    ,showSearch: true
+                    ,id: "into_scorecard"
+                    ,data: transferList
+                })
+              //批量办法定事件
+              util.event('lay-demoTransferActive', {
+                getBinningFeature: function(othis){
+                  var getData = transfer.getData('into_scorecard'); //获取右侧数据
+                }
+              });
+            });
+         }
+
+         function getScorecardFeatureList(obj_list){
+             binning_feature_list = []
+             for(let i=0; i<obj_list.length; i++){
+                 binning_feature_list.push(obj_list[i].value)
+             }
+             return binning_feature_list
+         }
+
+        // layui form
+        layui.use(['form','transfer'], function(){
+          var form = layui.form;
+          var transfer = layui.transfer;
+          form.on('submit(*)', function(data){
+              var data1 = form.val("form");
+              scorecard_feature_list = getScorecardFeatureList(transfer.getData('into_scorecard'))
+              if(scorecard_feature_list.length == 0){
+                  layer.msg('评分卡中至少需要一个特征');
+              }else{
+                  scorecard_feature_list = binning_feature_list.join(",")
+                  data1.scorecard_feature_list = scorecard_feature_list
+                  $.ajax({
+                    url: '.',
+                    method: 'post',
+                    data: data1,
+                    success: function (data) {
+                        layer.msg(data);
+                        setTimeout(function () {
+                            window.location.replace("../");
+                        }, 1000);
+                    }
+                  });
+              }
+
+            });
+        });
+
+    </script>
+{% endblock %}

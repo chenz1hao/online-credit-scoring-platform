@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h3>分箱任务ID{{ binning_task_id }}的分箱结果</h3>
+    <a href="/binning/update/{{ binning_task_id }}">
+        <button class="layui-btn layui-btn-normal">编辑分箱</button>
+    </a>
+    <div class="layui-tab layui-tab-brief">
+      <ul class="layui-tab-title">
+          {% for f in feature_name %}
+              {% if forloop.counter == 1 %}
+{#                  <li class="layui-this">{{ f }}</li>#}
+                  <li>{{ f }}</li>
+              {% else %}
+                  <li>{{ f }}</li>
+              {% endif %}
+          {% endfor %}
+      </ul>
+      <div class="layui-tab-content">
+          {% for f in feature_name %}
+            {% for feature, bins in binning_dict.items %}
+                {% if feature == f %}
+                    <div class="layui-tab-item">
+                        <table id="{{ f }}" lay-filter="test"></table>
+                    </div>
+                    <script>
+                        layui.use('table', function(){
+                          var table = layui.table;
+                          table.render({
+                            elem: '#{{ f }}'
+                            ,data: {{ bins|safe }}
+                            ,cols: [[ //表头
+                              {field: 'which_bin', title: '', width:50, fixed: 'left'}
+                              ,{field: 'this_bin_str', title: '分箱区间', width:130}
+                              ,{field: 'count', title: '样本数', width:80}
+                              ,{field: 'count_percent', title: '占总样本比例', width:130}
+                              ,{field: 'non_event_num', title: '好样本数', width: 90}
+                              ,{field: 'event_num', title: '坏样本数', width: 90}
+                              ,{field: 'event_rate', title: '坏样本比例', width: 130, sort: true}
+                              ,{field: 'woe', title: 'WoE', width: 150}
+                              ,{field: 'this_iv', title: 'IV', width: 150, sort: true}
+                              ,{field: 'total_iv', title: '特征IV值', width: 150}
+                              ,{field: 'is_special_values', title: '是否特殊分箱', width: 150}
+                              ,{field: 'breaks', title: '分割点', width: 150}
+                              ,
+                            ]]
+                            ,limit: 20
+                          });
+                        });
+                    </script>
+                {% endif %}
+            {% endfor %}
+          {% endfor %}
+      </div>
+    </div>
+
+    <script>
+        // 注意：选项卡 依赖 element 模块，否则无法进行功能性操作
+        layui.use('element', function(){
+          var element = layui.element;
+
+          //…
+        });
+
+        {#layui.use('table', function(){#}
+        {#  var table = layui.table;#}
+        {##}
+        {#  //第一个实例#}
+        {#  table.render({#}
+        {#    elem: '#ExternalRiskEstimate'#}
+        {#    ,height: 310#}
+        {#    ,data: [{{ binning_dict }}]#}
+        {#    ,page: true //开启分页#}
+        {#    ,cols: [[ //表头#}
+        {#      {field: 'which_bin', title: '分箱序号', width:110, sort: true, fixed: 'left'}#}
+        {#      ,{field: 'this_bin_str', title: '分箱区间', width:100}#}
+        {#      ,{field: 'count', title: '样本数', width:110, sort: true}#}
+        {#      ,{field: 'count_percent', title: '占总样本比例', width:130}#}
+        {#      ,{field: 'non_event_num', title: '好样本数', width: 100}#}
+        {#      ,{field: 'event_num', title: '坏样本数', width: 100}#}
+        {#      ,{field: 'event_rate', title: '坏样本比例', width: 130, sort: true}#}
+        {#      ,{field: 'woe', title: 'WoE', width: 80}#}
+        {#      ,{field: 'iv', title: 'IV', width: 80, sort: true}#}
+        {#      ,{field: 'js', title: 'JS', width: 80, sort: true}#}
+        {#    ]]#}
+        {#  });#}
+        {#});#}
+    </script>
+{% endblock %}

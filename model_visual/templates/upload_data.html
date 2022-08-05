@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <br><h2>上传新的数据集</h2><br>
+    <div class="layui-form" lay-filter="form">
+      <div class="layui-form-item">
+        <label class="layui-form-label">数据文件名</label>
+        <div class="layui-input-block">
+          <input type="text" name="data_name" autocomplete="off" class="layui-input" required lay-verify="required">
+        </div>
+      </div>
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">数据集描述</label>
+        <div class="layui-input-block">
+          <textarea name="data_desc" class="layui-textarea" required lay-verify="required"></textarea>
+        </div>
+      </div>
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">上传文件</label>
+        <div class="layui-input-block">
+            <form id="dataForm" method="post" enctype="multipart/form-data" action="uploadData">
+                {% csrf_token %}
+                <input type="file" name="data" id="data" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange="upload();" required lay-verify="required"/>
+            </form>
+            <table id="data_preview" lay-filter="test"></table>
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <label class="layui-form-label">指定标签列</label>
+        <div class="layui-input-block">
+           <select name="label_select" lay-filter="mySelect" id="labels">
+           </select>
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <label class="layui-form-label">缺失值标记</label>
+        <div class="layui-input-block">
+          <input type="text" name="special_code" autocomplete="off" class="layui-input" placeholder='以,分割，如：-7,-8,-9 没有则留空'>
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <div class="layui-input-block">
+          <a href="/dataset" class="layui-btn">返回</a>
+          <button class="layui-btn" lay-submit lay-filter="*">上传数据</button>
+        </div>
+      </div>
+    </div>
+
+<script src={% static 'js/jquery.form.js' %}></script>
+<script>
+    tableHeader = new Array()
+    data_json = null
+    my_table_obj = null
+
+    // 仅上传单个数据文件，用于预览用
+    function upload() {
+        var options = {
+            url: "../uploadTempData/",
+            type: "post",
+            success: function (data) {
+                if(data == "None"){
+                    {#$("#data_preview").empty(); // 清除失败，先留坑#}
+                    $("#data_preview").attr("hidden","true")
+                    clearLabelSelectItem()
+                    {#my_table_obj.reload({ cols: [], data: null })#}
+                }else if(data == "exist"){
+                    layer.msg('已有同名数据文件');
+                    clearLabelSelectItem()
+                    $('#data').val('');
+                }else{
+                    data_json = JSON.parse(data);
+                    makeTableHeader();
+                    previewTable();
+                    makeLabelSelectItem();
+                }
+            }
+        };
+        $("#dataForm").ajaxSubmit(options);
+    }
+    // 动态生成表头
+    function makeTableHeader(){
+        tableHeader = new Array()
+        for(let i = 0; i < data_json.schema.fields.length; i ++){
+            var temp = new Object();
+            temp.field = data_json.schema.fields[i]['name'];
+            temp.title = data_json.schema.fields[i]['name'];
+            temp.width = 100; // 后期可能需要动态调整表格宽度，先留在这里后面来填
+            tableHeader.push(temp);
+        }
+    }
+    // 渲染预览的表格
+    function previewTable(){
+        console.log(data_json.data)
+        if(my_table_obj == null){
+            layui.use('table', function(){
+              var table = layui.table;
+              my_table_obj = table.render({
+                elem: '#data_preview'
+                ,height: 312
+                ,cols: [tableHeader]
+                ,data: data_json.data
+                ,limit: 100
+                ,page: true
+              })
+            })
+        }else{
+            my_table_obj.reload({ cols: [tableHeader], data: data_json.data })
+        }
+
+    }
+
+    // 渲染标签选择的选项列表
+    function makeLabelSelectItem(){
+        $("#labels").empty();
+        let labels_option = ""
+        for(let i = 1; i < data_json.schema.fields.length; i ++) {
+            labels_option += '<option value="' + data_json.schema.fields[i]['name'] +'">'+ data_json.schema.fields[i]['name'] +'</option>'
+        }
+        $("#labels").append(labels_option);
+        layui.use('form', function(){
+           var form = layui.form;
+           form.render();
+        });
+    }
+
+    // 清空标签选择的选项列表
+    function clearLabelSelectItem(){
+        $("#labels").empty();
+        layui.use('form', function(){
+           var form = layui.form;
+           form.render();
+        });
+    }
+
+    // layui form
+    layui.use('form', function(){
+      var form = layui.form;
+      form.on('submit(*)', function(data){
+          var data1 = form.val("form");
+          $.ajax({
+            url: '.',
+            method: 'post',
+            data: data1,
+            success: function (data) {
+                layer.msg(data);
+                setTimeout(function () {
+                    window.location.replace("../");
+                }, 1000);
+            }
+          });
+        });
+    });
+
+</script>
+{% endblock %}

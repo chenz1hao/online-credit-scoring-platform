@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <br><h2>创建新的训练任务</h2><br>
+    <div class="layui-form" lay-filter="form">
+      <div class="layui-form-item">
+        <label class="layui-form-label">模型选择</label>
+        <div class="layui-input-block">
+           <select name="model_select" lay-filter="mySelect" required lay-verify="required">
+                <option value=""></option>
+                {% for m in models %}
+                    <option value="{{ m.id }}">{{ m.model_name }}</option>
+                {% endfor %}
+           </select>
+        </div>
+      </div>
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">数据集</label>
+        <div class="layui-input-block">
+            <select name="data_select" lay-filter="mySelect" required lay-verify="required">
+                <option value=""></option>
+                {% for data in dataset %}
+                    <option value="{{ data.id }}">{{ data.data_file_name }}</option>
+                {% endfor %}
+           </select>
+        </div>
+      </div>
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">训练集比例(%)</label>
+        <div class="layui-input-block">
+            <br><br>
+            <div id="slide" class="demo-slider" name="train_test_split"></div>
+        </div>
+      </div>
+      <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">随机种子(随机划分测试训练集)</label>
+        <div class="layui-input-block">
+            <input type="number" name="random_state" autocomplete="off" class="layui-input" lay-verify="number">
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <div class="layui-input-block">
+          <a href="../" class="layui-btn">返回</a>
+          <button class="layui-btn" lay-submit lay-filter="*">开始训练</button>
+        </div>
+      </div>
+    </div>
+    <script>
+        // 训练集比例滚动选择条
+        train_test_split_val = 70
+        layui.use('slider', function(){
+          var $ = layui.$
+          ,slider = layui.slider;
+          //开启输入框
+          slider.render({
+            elem: '#slide'
+            ,input: true //输入框
+            ,value: 70
+            ,change: function(value){
+                train_test_split_val = value
+            }
+          });
+        });
+        // layui form
+        layui.use('form', function(){
+          var form = layui.form;
+          form.on('submit(*)', function(data){
+              var data1 = form.val("form");
+              data1.train_test_split = train_test_split_val
+              $.ajax({
+                url: '.',
+                method: 'post',
+                data: data1,
+                success: function (data) {
+                    layer.msg(data);
+                    setTimeout(function () {
+                        window.location.replace("../");
+                    }, 1000);
+                }
+              });
+            });
+        });
+    </script>
+{% endblock %}

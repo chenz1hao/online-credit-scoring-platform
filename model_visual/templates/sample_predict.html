@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <br><h2>训练任务ID{{ task_id }}_预测/解释单个样本</h2><br>
+    <div class="row">
+        <!-- 输入特征列 -->
+        <div class="col-md-3" style="border-right:1px dashed gray">
+            <div class="layui-form" lay-filter="form">
+                <div class="layui-form-item">
+                    <button id="run_model_btn" class="layui-btn" lay-submit lay-filter="*">运行模型</button>
+                </div>
+                {% for f in features %}
+                    <div class="layui-form-item">
+                        {{ f }}<input type="text" name="{{ f }}" required lay-verify="number" class="layui-input" style="width: 30%" value="60">
+                    </div>
+                    <hr>
+                {% endfor %}
+                <hr>
+                <a href="/tasks" class="layui-btn">返回</a>
+            </div>
+        </div>
+        <!-- 输出预测列 -->
+        <div class="col-md-2" style="border-right:1px dashed gray">
+            <p style="font-size: 20px"><b>模型预测</b></p>
+            <div id="output" style="font-size: 30px"></div>
+        </div>
+        <!-- 坏样本解释列 -->
+        <div class="col-md-7">
+            <p style="font-size: 20px"><b>one-hot 汉明距离最近的样本</b></p>
+            <div>
+                <table class="layui-table" style="width: 100%">
+                    <colgroup>
+                        <col width="50">
+                        <col width="100">
+                        <col>
+                    </colgroup>
+                    <thead>
+                        <tr id="header">
+                            <th>距离</th>
+                            <th>下标</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sample_rows">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        // layui form
+        layui.use('form', function(){
+            var form = layui.form;
+            form.on('submit(*)', function(data){
+                $("#run_model_btn").attr("class", "layui-btn layui-btn-disabled")
+                $("#run_model_btn").html("运行中...")
+
+                data.field.task_id = {{ task_id }}
+                html_txt = "<p style='color:black'>运行中...</p>"
+                $("#header").html("<th>距离</th><th>下标</th>")
+                $("#sample_rows").html("")
+                $("#output").html(html_txt)
+                $.ajax({
+                    url: '.',
+                    method: 'post',
+                    data: data.field,
+                    success: function (data) {
+                        $("#run_model_btn").html("运行模型")
+                        data_obj = JSON.parse(data)
+                        // 渲染模型输出列
+                        makeOutputCol(data_obj.predict);
+                        // 渲染汉明距离最近样本列
+                        makeHanmingNearest(data_obj.nearest_samples)
+                        $("#run_model_btn").attr("class", "layui-btn")
+                    },
+                    error: function(){
+                        html_txt = "<p style='color:black'>运行失败</p>"
+                        $("#run_model_btn").html("运行模型")
+                        $("#output").html(html_txt)
+                        $("#header").html("<th>距离</th><th>下标</th>")
+                        $("#run_model_btn").attr("class", "layui-btn")
+                    }
+                });
+            });
+        });
+
+        function makeOutputCol(data){
+            if (data == 1){
+                html_txt = "<p style='color:red'>坏样本</p>"
+            }
+            else if(data == 0){
+                html_txt = "<p style='color:green'>好样本</p>"
+            }
+            $("#output").html(html_txt)
+        }
+
+        function makeHanmingNearest(nearest_samples){
+            sample_rows_html_txt = ""
+            for(let i=0; i<nearest_samples.length; i++){
+                col_list = Object.keys(nearest_samples[i][2])
+                if(i == 0){
+                    // 需要填充表头
+                    for(let j=0; j<col_list.length; j++) {
+                        $("#header").append("<th>" + col_list[j] + "</th>")
+                    }
+                }
+                // 填充一行数据
+                console.log(nearest_samples[i][2])
+                this_row_html = "<tr>"
+                this_row_html += "<td>" + nearest_samples[i][0].toString() + "</td>"
+                this_row_html += "<td>" + nearest_samples[i][1].toString() + "</td>"
+                for(let j=0; j<col_list.length; j++){
+                    console.log(col_list[j] + " " + nearest_samples[i][2][col_list[j]])
+                    this_row_html += "<td>"
+                    this_row_html += nearest_samples[i][2][col_list[j]].toString()
+                    this_row_html += "</td>"
+                }
+                this_row_html += "</tr>"
+                $("#sample_rows").append(this_row_html)
+            }
+        }
+    </script>
+{% endblock %}

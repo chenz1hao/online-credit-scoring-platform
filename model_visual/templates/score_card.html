@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    {% for feature, bins in score_card.items %}
+        <fieldset class="layui-elem-field layui-field-title" style="margin-top: 50px;">
+          <legend>{{ feature }}</legend>
+        </fieldset>
+        <table class="layui-table" lay-size="lg">
+          <colgroup>
+            <col width="150">
+            <col width="200">
+            <col>
+          </colgroup>
+          <thead>
+            <tr>
+              <th>特征</th>
+              <th>分箱</th>
+              <th>得分</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in bins %}
+                <tr>
+                  {% for col in row  %}
+                    <td>{{ col }}</td>
+                  {% endfor %}
+                </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+    {% endfor %}
+
+{% endblock %}

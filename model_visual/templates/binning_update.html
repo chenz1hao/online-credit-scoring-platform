@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h3>编辑分箱</h3>
+    <div class="layui-form" lay-filter="form">
+        <div class="layui-tab layui-tab-brief">
+          <ul class="layui-tab-title">
+              {% for f in feature_name %}
+                  {% if forloop.counter == 1 %}
+    {#                  <li class="layui-this">{{ f }}</li>#}
+                      <li>{{ f }}</li>
+                  {% else %}
+                      <li>{{ f }}</li>
+                  {% endif %}
+              {% endfor %}
+          </ul>
+          <div class="layui-tab-content">
+              {% for f in feature_name %}
+                {% for feature, bins in features_breaks.items %}
+                    {% if feature == f %}
+                        <div class="layui-tab-item" id="{{ f }}_bins">
+                            {% for b in bins %}
+                                <input id="{{ f }}_{{ forloop.counter }}" value="{{ b.breaks }}" name="{{ f }}_{{ forloop.counter }}" required lay-verify="required" class="layui-input" onfocus="makeButton('{{ f }}',{{ forloop.counter }});"/>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+              {% endfor %}
+          </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+              <button class="layui-btn" lay-submit lay-filter="formDemo">更新分箱</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function makeButton(feature_name, index){
+            clearButton();
+            makeAddButton(feature_name, index)
+            makeDelButton(feature_name, index)
+        }
+        function makeAddButton(feature_name, index){
+            onclick_txt = "\"add_bin('" + feature_name + "', " + index + ");\""
+            btn_html = '<button type="button" class="layui-btn" onclick='+onclick_txt+' id="' + feature_name + '_' + index + '_add_btn">添加分箱</button>'
+            $("#" + feature_name + "_" + index).after(btn_html)
+        }
+        function makeDelButton(feature_name, index){
+            onclick_txt = "\"del_bin('" + feature_name + "', " + index + ");\""
+            btn_html = '<button type="button" class="layui-btn layui-btn-danger" onclick=' + onclick_txt + ' id="' + feature_name + '_' + index + '_del_btn">删除分箱</button>'
+            $("#" + feature_name + "_" + index).after(btn_html)
+        }
+        function clearButton(){
+            // 清楚所有以_add_btn 和 _del_btn结尾的button
+            $("button[id$='_add_btn'],button[id$='_del_btn']").remove()
+        }
+        function add_bin(feature_name, index){
+            id_txt = feature_name + "_" + (index+1)
+            name_txt = feature_name + "_" + (index+1)
+            makeButtonParam_txt = '\'' + feature_name + '\',' + (index+1)
+            // 将featurename_index+1 ~ featurename_倒数一个的index全部加一
+            need_modify_id = []
+            modify_id = index
+            while($("#" + feature_name + "_" + (modify_id+1)).length>0){
+                need_modify_id.push(modify_id+1)
+                modify_id += 1
+            }
+            // 从后往前更改id，不然id会重复
+            for(let i=need_modify_id.length-1; i>=0; i--){
+                $("#" + feature_name + "_" + need_modify_id[i]).attr("name", feature_name + "_" + (need_modify_id[i]+1))
+                $("#" + feature_name + "_" + need_modify_id[i]).attr("onfocus", "makeButton(\'" + feature_name + "\'," + (need_modify_id[i]+1) + ")")
+                // id必须最后修改
+                $("#" + feature_name + "_" + need_modify_id[i]).attr("id", feature_name + "_" + (need_modify_id[i]+1))
+            }
+
+            bin_txt = '<input id="' + id_txt+ '" name="'+ name_txt +'" required lay-verify="required" class="layui-input" onfocus="makeButton(' + makeButtonParam_txt + ');"/>'
+            $("#" + feature_name + '_' + index + '_add_btn').after(bin_txt)
+        }
+
+        function del_bin(feature_name, index){
+            $("#" + feature_name + "_" + index).remove()
+            modify_id = index
+            need_modify_id = []
+            while($("#" + feature_name + "_" + (modify_id+1)).length>0){
+                need_modify_id.push(modify_id+1)
+                modify_id += 1
+            }
+            for(let i=0; i<need_modify_id.length; i++) {
+                $("#" + feature_name + "_" + need_modify_id[i]).attr("name", feature_name + "_" + (need_modify_id[i]-1))
+                $("#" + feature_name + "_" + need_modify_id[i]).attr("onfocus", "makeButton(\'" + feature_name + "\'," + (need_modify_id[i]-1) + ")")
+                // id必须最后修改
+                $("#" + feature_name + "_" + need_modify_id[i]).attr("id", feature_name + "_" + (need_modify_id[i]-1))
+            }
+            clearButton()
+        }
+
+
+        layui.use('form', function(){
+          var form = layui.form;
+          //监听提交
+          form.on('submit(formDemo)', function(data){
+              $.ajax({
+                url: '/binning/update/{{ binning_task_id }}',
+                method: 'post',
+                data: data.field,
+                success: function (data) {
+                    layer.msg(data);
+                    setTimeout(function () {
+                        window.location.replace("../");
+                    }, 1000);
+                }
+              });
+          });
+        });
+    </script>
+{% endblock %}
